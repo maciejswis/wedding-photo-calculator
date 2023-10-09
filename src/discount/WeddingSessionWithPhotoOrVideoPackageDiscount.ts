@@ -1,26 +1,28 @@
-import { CalculatorResult, DiscountDefinition, DiscountInput } from "./DiscountDefinition";
-import { PriceDefinition } from "../PriceDefinition";
+import { DiscountDefinition, DiscountInput } from "./DiscountDefinition";
+import { PriceDefinition } from "../priceCalculator/PriceDefinition";
+import { ServiceTypeName } from "../ServiceTypeName";
 
 export class WeddingSessionWithPhotoOrVideoPackageDiscount extends DiscountDefinition {
+    private readonly discountValue: PriceDefinition;
+    
     constructor(input: DiscountInput) {
         super(input);
+        this.discountValue = new PriceDefinition(300, "USD");
     }
-    
-    private readonly discountValue = new PriceDefinition(300, "USD");
+
+    affectsService(service: ServiceTypeName): boolean {
+        return service === "WeddingSession";
+    }
 
     isApplicable(): boolean {
-        return this.services.some(x => x.name === "WeddingSession")
+        return this.services.some(x => x === "WeddingSession")
             && (
-                this.services.some(x => x.name === "VideoRecording")
-                || this.services.some(x => x.name === "Photography")
+                this.services.some(x => x === "VideoRecording")
+                || this.services.some(x => x === "Photography")
             );
-
     }
 
-    getCalculationAfterDiscount(result: CalculatorResult): CalculatorResult { 
-        return {
-            basePrice: result.basePrice,
-            finalPrice: result.basePrice.minus(this.discountValue)
-        };
+    getPriceAfterDiscount(basePrice: PriceDefinition): PriceDefinition {
+        return basePrice.minus(this.discountValue);
     }
 }

@@ -1,12 +1,11 @@
-import { PriceCalculator } from "./PriceCalculator";
-import { PriceDefinition } from "./PriceDefinition";
+import { calculateServicePrice } from "./priceCalculator/PriceCalculator";
+import { PriceDefinition } from "./priceCalculator/PriceDefinition";
 import { ServiceType } from "./ServiceType";
 import { validateSelectedServices } from "./validateSelectedServices";
 import { DiscountDefinitionBuilders } from "./discount/DiscountDefinitionBuilders";
 import { ServiceYear } from "./ServiceYear";
 import { ServiceTypeName } from "./ServiceTypeName";
-import { CalculatorResult } from "./discount/DiscountDefinition";
-import { getUniqueValues, getGreaterDiscount } from "./utils";
+import { getUniqueValues } from "./utils";
 
 export const updateSelectedServices = (
     previouslySelectedServices: ServiceTypeName[],
@@ -44,31 +43,30 @@ export const calculatePrice = (
     selectedServiceNames: ServiceTypeName[],
     selectedYear: ServiceYear): Result => {
 
-    const selectedServices = validateSelectedServices(selectedServiceNames.map(ser => ServiceType[ser]));
+    const selectedServices: ServiceTypeName[] = validateSelectedServices(selectedServiceNames.map(ser => ServiceType[ser]))
+        .map(s => s.name);
 
-    // calculate base price
-    const basePrice = selectedServices
-        .map(service => PriceCalculator.getBasePrice(service.name, selectedYear))
-        .reduce((sum, current) => sum.plus(current), new PriceDefinition(0));
-
-    var result: CalculatorResult = { basePrice: basePrice, finalPrice: basePrice };
-
-    // check all potential discounts
+    // get all applicable discounts
     const discountDefinitions = DiscountDefinitionBuilders
         .map(builder => builder({
             services: selectedServices,
-            year: selectedYear,
+            year: selectedYear
         }))
-        .filter(def => def.isApplicable())
+        .filter(def => def.isApplicable());
 
-    for (const discountDef of discountDefinitions) {
-        const discountCalculation = discountDef.getCalculationAfterDiscount(result);
-        result = getGreaterDiscount(result, discountCalculation)
-    }
+    const result = selectedServices
+        .map(service => calculateServicePrice(service, selectedYear, discountDefinitions))
+        .reduce((sum, current) => ({
+            basePrice: sum.basePrice.plus(current.basePrice),
+            finalPrice: sum.finalPrice.plus(current.finalPrice)
+        }), {
+            basePrice: new PriceDefinition(0, "USD"),
+            finalPrice: new PriceDefinition(0, "USD")
+        });
 
     return {
         basePrice: result.basePrice.getAmount(),
         finalPrice: result.finalPrice.getAmount()
-    }
+    };
 };
 

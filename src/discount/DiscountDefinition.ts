@@ -1,10 +1,10 @@
-import { PriceDefinition } from "../PriceDefinition";
-import { ServiceType } from "../ServiceType";
+import { PriceDefinition } from "../priceCalculator/PriceDefinition";
+import { ServiceTypeName } from "../ServiceTypeName";
 import { ServiceYear } from "../ServiceYear";
 
 export type DiscountInput = {
-    services: ServiceType[],
-    year: ServiceYear
+    services: ServiceTypeName[],
+    year: ServiceYear,
 }
 
 export type CalculatorResult = {
@@ -13,15 +13,16 @@ export type CalculatorResult = {
 }
 
 export abstract class DiscountDefinition {
-    readonly services: ServiceType[];
+    readonly services: ServiceTypeName[];
     readonly year: ServiceYear;
-    
+
     constructor(input: DiscountInput) {
         this.services = input.services;
         this.year = input.year;
     }
 
+    abstract affectsService(service: ServiceTypeName): boolean;
     abstract isApplicable(): boolean;
-    abstract getCalculationAfterDiscount(currentResult: CalculatorResult): CalculatorResult;
+    abstract getPriceAfterDiscount(basePrice: PriceDefinition): PriceDefinition;
 }
 
